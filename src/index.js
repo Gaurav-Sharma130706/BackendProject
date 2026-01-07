@@ -1,3 +1,6 @@
+import connectDB from "./db/index.js";
+import { app } from "./app.js";
+
 // require('dotenv').config({path: './env'}) //This is done to make enviorment variables available at the very start but this breaks the consistency of our file since here we are ussing require but below we use import
 
 import dotenv from "dotenv"      //this is the replacement code of above to maintain consistency
@@ -7,9 +10,37 @@ dotenv.config({
 //all the code and change in dev script done above is just for consistency :|
 
 
-import connectDB from "./db/index.js";
+
 
 connectDB()
+.on("error",(error)=>{
+    console.log("Error",error);
+    throw error;
+})
+.then(()=>{
+    app.listen(process.env.PORT || 8000, ()=>{
+        console.log(`Server is running at port ${process.env.PORT}`);
+    })
+})
+.catch((err)=>{
+    console.log("MONGO DB connection failed!!!", err) //this will show "MONGO DB connection failed!!!" + even the error in console
+})
+
+
+/*
+Modern clean way (recommended) for the .on, .then, .catch code  therefore we laern theere are 2 ways to write the try catch part wala code in JS
+try {
+   await connectDB();
+   app.listen(PORT);
+} catch (err) {
+   console.log("DB connection failed", err);
+} 
+   */
+
+
+
+
+
 
 
 
