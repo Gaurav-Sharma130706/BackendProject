@@ -21,6 +21,16 @@ app.use(express.urlencoded({extended: true, limit:"16kb"}))      //tells the ser
 app.use(express.static("Public"))    //static allows us to store some files folders in server
 
 
+//routes import
+import userRouter from "./routes/user.routes.js"
+
+//routes declaration
+app.use("/api/v1/users",userRouter)     ///api/v1/users par jate hi userRouter is activated and control transfered to user.routes.js    
+
+
+
+
+
 
 
 export {app}

@@ -1,4 +1,4 @@
-const asyncHandler= (fn)=>{ 
+/*const asyncHandler= (fn)=>{ 
     async(req,res,next)=>{
         try {
             await fn(req,res,next)
@@ -10,16 +10,16 @@ const asyncHandler= (fn)=>{
         }
     }                     //arrow fnc ke andar arrow fnc
 }
+*/
 
 
-/*It could be written like this also in some codebases
+//It could be written like this also in some codebases
 const asyncHandler = (requestHandler) => {
     return (req, res, next) => {
         Promise.resolve(requestHandler(req, res, next))
             .catch((err) => next(err));
     };
 };
- */
-
+ 
 
 export {asyncHandler}

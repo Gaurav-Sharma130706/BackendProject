@@ -1,5 +1,6 @@
 import connectDB from "./db/index.js";
 import { app } from "./app.js";
+import mongoose from "mongoose";
 
 // require('dotenv').config({path: './env'}) //This is done to make enviorment variables available at the very start but this breaks the consistency of our file since here we are ussing require but below we use import
 
@@ -12,11 +13,15 @@ dotenv.config({
 
 
 
+mongoose.connection.on("error", (err) => {
+  console.log("MongoDB runtime error:", err);
+});
+
 connectDB()
-.on("error",(error)=>{
+/*.on("error",(error)=>{
     console.log("Error",error);
-    throw error;
-})
+    throw error;                    this didnt work therefore to use .on above code is written
+})*/
 .then(()=>{
     app.listen(process.env.PORT || 8000, ()=>{
         console.log(`Server is running at port ${process.env.PORT}`);
