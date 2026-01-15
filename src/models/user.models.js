@@ -53,15 +53,13 @@ const userSchema=new Schema(
         }
     },{timestamps:true})
 
+userSchema.pre("save", async function () {      //we use async fnc beacuse this encryption procces takes some time
 
+    if (!this.isModified("password")) return;
 
-userSchema.pre("save",async function (next) {    //we use async fnc beacuse this encryption procces takes some time
+    this.password = await bcrypt.hash(this.password, 10);    //10 is the rounds we gave , can be any value it is something related to encryption of pass
+});      //the code inside pre will be executed just before saving the data into DB since we used "save" as the 1st argument
 
-    if(!this.isModified("password")) return next(); 
-
-    this.password= await bcrypt.hash(this.password,10)     //10 is the rounds we gave , can be any value it is something related to encryption of pass
-    next()
-})         //the code inside pre will be executed just before saving the data into DB since we used "save" as the 1st argument
 
 
 userSchema.methods.isPasswordCoreect= async function (password) {          //here we are creating a method for the userSchema to compare textpassword and encrypted password
