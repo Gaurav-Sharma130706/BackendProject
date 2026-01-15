@@ -59,7 +59,7 @@ userSchema.pre("save",async function (next) {    //we use async fnc beacuse this
 
     if(!this.isModified("password")) return next(); 
 
-    this.password=bcrypt.hash(this.password,10)     //10 is the rounds we gave , can be any value it is something related to encryption of pass
+    this.password= await bcrypt.hash(this.password,10)     //10 is the rounds we gave , can be any value it is something related to encryption of pass
     next()
 })         //the code inside pre will be executed just before saving the data into DB since we used "save" as the 1st argument
 
@@ -95,4 +95,4 @@ userSchema.methods.generateRefreshToken = function(){  //refresh token mai info 
     )
 }
 
-export const user=mongoose.model("User",userSchema)
+export const User=mongoose.model("User",userSchema)
