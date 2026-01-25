@@ -3,6 +3,25 @@ import {APIerror} from "../utils/APIerror.js"
 import {User} from "../models/user.models.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {APIresponse} from "../utils/APIresponse.js"
+import jwt from "jsonwebtoken"
+
+
+
+const generateAccessAndRefreshTokens =async(userID)=>{
+    try {
+        const user= await User.findById(userID)
+        const accessToken=user.generateAccessToken()
+        const refreshToken=user.generateRefreshToken()
+
+        user.refreshToken=refreshToken  //Here we inserted the generated refresh token inside our DB, i.e. jo apna uss particular user ka object hai usme apna refresh token save kar rahe hain
+        await user.save({validateBeforeSave: false}) //Now we are saving that user object, par save karne se pehle it will need other fields like username password etc. as well therefore to avoid it we use {validateBeforeSave: false}
+
+        return {refreshToken,accessToken}
+
+    } catch (error) {
+       throw new APIerror(500,"Something went wrong while generating refresh and access token") 
+    }
+}
 
 const registerUser= asyncHandler( async(req,res)=>{
     
@@ -87,5 +106,130 @@ const registerUser= asyncHandler( async(req,res)=>{
 
 })
 
-export {registerUser}
+
+const loginUser= asyncHandler(async(req,res)=>{
+    //Step-1
+    const {email,username,password}= req.body
+
+    if(!username && !email){           //We are giving the option to user to login either from username or email
+        throw new APIerror(400,"Either username or email is required")
+    }
+
+
+    const user= await User.findOne({
+        $or: [{username},{email}]
+    })
+
+    if(!user){
+        throw new APIerror(404,"User does not exist")
+    }
+
+    const isPasswordValid= await user.isPasswordCoreect(password)
+
+    if(!isPasswordValid){
+        throw new APIerror(401,"Password is incorrect")
+    }
+
+    //Step-5 Access and refresh token (for it we have created a method at top of this file)
+    const {accessToken,refreshToken}= await generateAccessAndRefreshTokens(user._id)
+    
+    //Sending cookies
+    const loggedInUser= await User.findById(user._id).select("-password -refreshToken") //we created logged in user, in it we dont take password and refresh token beacause we will send it as cookie and they can be hacked
+
+    const options={
+        httpOnly:true,
+        secure: true, 
+    }
+                                   //Key         Value       options that we made above
+    return res.status(200).cookie("accessToken", accessToken,options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new APIresponse(
+            200,
+            {
+                user: loggedInUser,accessToken,refreshToken
+            },
+            "User logged In Successfully"
+        )
+    )
+
+
+
+})
+
+//Inside logoutUser we cant search for the user based on their email OR username inside the DB since it will require the user to fill a form at time of logout with username and email, moreover he may logout any other user as well by filling there username in form, therefore we use middleware
+const logoutUser= asyncHandler(async(req,res)=>{
+    await User.findByIdAndUpdate(
+        req.user._id,        //this req.user default se req ke pass nhi hota hai but apan ne verifyJWT middleware use kara hai before logoutUser jisne isnko inject kara in req._id
+        {
+            $set:{
+                refreshToken:undefined
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+
+    const options={
+        httpOnly:true,
+        secure: true, 
+    }
+
+    return res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options)
+    .json(new APIresponse(200,{},"User logged out"))
+    
+
+
+    
+})
+
+const refreshAccessToken=asyncHandler(async(req,res)=>{
+    const incomingRefreshToken=req.cookies.refreshToken || req.body.refreshToken
+
+    if(incomingRefreshToken){
+        throw new APIerror(401,"Unauthorized request")
+    }
+
+    //here we are decoding the refresh token since in DB it's stored in decode format
+   try {
+
+     const decodedToken= jwt.verify(
+         incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET
+     )
+ 
+     const user=await User.findById(decodedToken?._id )
+ 
+     if(!user){
+         throw new APIerror(401,"Invalid refresh token")
+     }
+ 
+     if(incomingRefreshToken !== user?.refreshToken){
+         throw new APIerror(401,"Refresh token is expired OR used")
+     }
+ 
+ 
+     const options ={
+         httpOnly:true,
+         secure:true
+     }
+ 
+    const {accessToken,newRefreshToken}= await generateAccessAndRefreshTokens(user._id)
+ 
+    return res.status(200).cookie("accessToken",accessToken, options ).cookie("refreshToken", newRefreshToken,options).json(
+     new APIresponse(
+         200,
+         {accessToken,refreshToken: newRefreshToken},
+         "Access token refreshed"
+     )
+    )
+
+   } catch (error) {
+        throw new APIerror(401, error?.message ||"Invalid refresh token")
+   }
+
+})
+
+export {registerUser, loginUser, logoutUser, refreshAccessToken}
 

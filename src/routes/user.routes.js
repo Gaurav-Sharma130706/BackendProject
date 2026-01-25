@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser, refreshAccessToken } from "../controllers/user.controller.js";
 import {upload} from "../middlewares/multer.middleware.js"
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router =Router()
 
@@ -17,6 +18,13 @@ router.route("/register").post(
     ]),
     registerUser
 )
+
+router.route("/login").post(loginUser)
+
+//Secured Routes
+router.route("/logout").post(verifyJWT, logoutUser) //VerifyJWT is a middelwaare, in the aruments inside post it is written 1st there executed first, than the next() inside it tells that now run the next one
+
+router.route("/refresh-token").post(refreshAccessToken)
 
 
 
