@@ -4,6 +4,17 @@ import {User} from "../models/user.models.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {APIresponse} from "../utils/APIresponse.js"
 import jwt from "jsonwebtoken"
+import { v2 as cloudinary } from "cloudinary";
+
+
+
+// helper to get public_id from cloudinary url
+const getPublicId = (url) => {
+  const parts = url.split("/");
+  const fileName = parts[parts.length - 1]; // abc123.jpg
+  return fileName.split(".")[0]; // abc123
+};
+
 
 
 
@@ -248,7 +259,7 @@ const changeCurrentPassword= asyncHandler(async(req,res)=>{
 })
 
 const getCurrentUser = asyncHandler(async(req,res)=>{
-    return res.status(200).json(200, req.user, "Current user fetched succesfully") //In req.user we have thu user due to our auth middleware
+    return res.status(200).json(new APIresponse(200, req.user, "Current user fetched succesfully")) //In req.user we have thu user due to our auth middleware
 })
 
 //To allow user to  change his personal info 
@@ -259,7 +270,7 @@ const updateAccountDetails=asyncHandler(async(req,res)=>{
         throw new APIerror(400,"All fields are required")
     }
 
-    const user= User.findByIdAndUpdate(
+    const user= await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -282,10 +293,22 @@ const updateUserAvatar= asyncHandler(async(req,res)=>{
         throw new APIerror(400,"Avatar file is missing")
     }
 
+    
+
+    //getting the old avatar since we will remove it once the new one is updated
+    const userOld= await User.findById(req.user?._id)
+    const oldAvatarURL= await userOld?.avatar
+
     const avatar= await uploadOnCloudinary(avatarLocalPath)
+
 
     if(!avatar.url){
         throw new APIerror(400,"Error while uploading on avatar")
+    }
+
+    if (oldAvatarURL) {
+        const publicId = getPublicId(oldAvatarURL);
+        await cloudinary.uploader.destroy(publicId);
     }
 
     const user = await User.findByIdAndUpdate(
@@ -298,6 +321,8 @@ const updateUserAvatar= asyncHandler(async(req,res)=>{
         {new:true}
     ).select("-password")
 
+    
+
     return res.status(200).json(new APIresponse(200,user,"Avatar updated succesfully"))
 })
 
@@ -308,11 +333,22 @@ const updateUserCoverImage= asyncHandler(async(req,res)=>{
         throw new APIerror(400,"Cover Image is missing")
     }
 
+    const olduser=await User.findById(req.user?._id)
+    const oldCoverURL= await olduser?.coverImage
+
+
     const coverImage = await uploadOnCloudinary(coverLocalPath)
 
     if(!coverImage.url){
         throw new APIerror(400, "Error while uploading the cover image")
     }
+    
+    if(oldCoverURL){
+        const publicID=getPublicId(oldCoverURL)
+        await cloudinary.uploader.destroy(publicID);
+    }
+
+    
 
     const user =await User.findByIdAndUpdate(
         req.user?._id,
