@@ -5,6 +5,7 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import {APIresponse} from "../utils/APIresponse.js"
 import jwt from "jsonwebtoken"
 import { v2 as cloudinary } from "cloudinary";
+import mongoose from "mongoose"
 
 
 
@@ -364,6 +365,132 @@ const updateUserCoverImage= asyncHandler(async(req,res)=>{
 
 })
 
+const getUserChannelProfile= asyncHandler(async(req,res)=>{
+    const {username}=req.params //getting username from the url since channel of mortal will work at ..../mortal URL
+
+    if(!username?.trim()){
+        throw new APIerror(400,"Username is missing")
+    }
+
+    const channel= await User.aggregate([       //Here we are not finding the user(channel) by using User.findbyId instead for that also we used aggregation
+       
+        { //1st aggregation pipeline, through which we search the channel
+            $match:{
+                username:username?.toLowerCase()
+            }
+        },
+
+        {  //2nd aggregation pipeline through which we get subscibers
+            $lookup:{
+                from:"subscryptions",
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"             //nayi field bann jayegi of subscribers
+            }
+        },
+        {  //3rd pipeline through which we get the channels to which user is subscribed
+            $lookup:{
+                from:"subscryptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{
+                    $size:"$subscribers"  //Here we use $ because now subscribers had become a field
+                },
+                channelsSubscribedToCount:{
+                    $size:"$subscribedTo"
+                },
+                isSubscribed:{
+                    $cond:{
+                        if:{$in: [req.user?._id,"$subscribers.subscriber"]}, //$in used to check something in arrays or objects
+                        then: true,
+                        else:false
+                    }
+                        
+                }
+            }
+        },
+        {
+            $project:{      //$ project is used to send to frontend only the fields required in frontend
+                fullName:1,
+                username:1,
+                subscribersCount:1,
+                channelsSubscribedToCount:1,
+                isSubscribed:1,
+                avatar:1,
+                coverImage:1,
+                email:1
+
+            }
+        }
+
+
+    ])
+
+    if(!channel?.length){
+        throw new APIerror(404,"Channel does not exist")
+    }
+
+    console.log(channel)
+
+    return res.status(200).json(new APIresponse(200,channel[0],"User channel fetched succesfully"))
+
+})
+
+const getWatchHistory= asyncHandler(async(req,res)=>{
+    //"req.user._id" provides us a string which mongoose uses to extract the mongoDB id therefore we use it in findbyid(_id), this is due to mongoose
+    //Therefore "req.user._id" is not the mongoDB id
+    const user= await User.aggregate([
+        {//1st pipeline jiss ke through apan ko user mille ga
+            $match:{
+               // _id: req.user._id cant pass like this since aggregation pipelines ka code ese hi bheja jata hai without the processing of mongoose
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup:{
+                from:"videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as:"watchHistory",
+                pipeline:[     //Using subPipeline
+                    {
+                        $lookup:{
+                            from:"users",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner",
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullName:1,
+                                        username:1,
+                                        avatar:1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {//This pipeline we are using so that data is sent to frontend in proper manner, otherwise data will be sent in array, and all datafullName,username,avatar will be the 1st entry of array
+                        $addFields:{
+                            owner:{
+                                $first:"$owner"
+                            }
+                        }
+                    }
+                ]
+
+            }
+        }
+    ])
+
+    return res.status(200).json(new APIresponse(200,user[0].watchHistory,"Watch history fetched"))
+})
+
 export {registerUser, 
         loginUser, 
         logoutUser, 
@@ -372,5 +499,7 @@ export {registerUser,
         getCurrentUser,
         updateAccountDetails,
         updateUserAvatar,
-        updateUserCoverImage}
+        updateUserCoverImage,
+        getUserChannelProfile,
+        getWatchHistory}
 
