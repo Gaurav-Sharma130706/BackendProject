@@ -174,8 +174,11 @@ const logoutUser= asyncHandler(async(req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,        //this req.user default se req ke pass nhi hota hai but apan ne verifyJWT middleware use kara hai before logoutUser jisne isnko inject kara in req._id
         {
-            $set:{
-                refreshToken:undefined
+            // $set:{
+            //     refreshToken:undefined
+            // }    this didnt work like after writing this the refresh token still existed with the user
+            $unset:{
+                refreshToken:1
             }
         },
         {
