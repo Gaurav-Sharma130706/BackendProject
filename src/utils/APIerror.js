@@ -6,7 +6,7 @@ class APIerror extends Error{
         stack=""                         //Error satck if we will get it we will show it
 
     ){
-        super(message)
+        super(message)  //is calling the constructor of the built-in Error class.
         this.statusCode=statusCode
         this.data= null
         this.message=message

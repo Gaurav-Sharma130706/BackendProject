@@ -53,6 +53,7 @@ const userSchema=new Schema(
         }
     },{timestamps:true})
 
+//To encrypt the new password whenever the password is changed
 userSchema.pre("save", async function () {      //we use async fnc beacuse this encryption procces takes some time
 
     if (!this.isModified("password")) return;
