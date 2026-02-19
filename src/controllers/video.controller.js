@@ -8,9 +8,84 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { v2 as cloudinary } from "cloudinary";
 
 
+// helper to get public_id from cloudinary url
+const getPublicId = (url) => {
+  const parts = url.split("/");
+  const fileName = parts[parts.length - 1]; // abc123.jpg
+  return fileName.split(".")[0]; // abc123
+};
+
+
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query  
     //TODO: get all videos based on query, sort, pagination
+
+    //Never trust query params (they are strings).
+    let pageNum = Number(page)
+    let limitNum = Number(limit)
+
+    // Validate page
+    if (!Number.isInteger(pageNum) || pageNum < 1) {
+    throw new APIerror(400, "Page must be a positive integer")
+    }
+
+    // Validate limit
+    if (!Number.isInteger(limitNum) || limitNum < 1) {
+    throw new APIerror(400, "Limit must be a positive integer")
+    }
+
+    //To protect against page bombing 
+    const MAX_LIMIT = 50
+    if (limitNum > MAX_LIMIT) {
+    limitNum = MAX_LIMIT
+    }
+
+    const skip = (pageNum - 1) * limitNum     //Formula to calculate skip
+
+    // Build filter object
+    const filter = {
+        isPublished: true   // only published videos
+    }
+
+    // Search logic
+    if (query) {
+        filter.$or = [
+            { title: { $regex: query, $options: "i" } },
+            { description: { $regex: query, $options: "i" } }
+        ]
+    }
+
+    // Filter by userId if provided
+    if (userId) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new APIerror(400, "Invalid User ID")
+        }
+        filter.owner = userId
+    }
+
+    // Sorting logic
+    const sortOrder = sortType === "asc" ? 1 : -1
+    const sortOptions = { [sortBy]: sortOrder }
+
+    // Fetch videos
+    const videos = await Video.find(filter)
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .populate("owner", "username fullName avatar")   //For when the frontend filters videos on basis of the owner
+
+    // Get total count for pagination metadata
+    const totalVideos = await Video.countDocuments(filter)
+    const totalPages = Math.ceil(totalVideos / limitNum)
+
+    return res.status(200).json(
+        new APIresponse(200, {
+            totalVideos,
+            totalPages,
+            currentPage: pageNum,
+            videos
+        }, "Videos fetched successfully")
+    )
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -160,11 +235,75 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
     //TODO: delete video
     const { videoId } = req.params
+
+    //Is request coming from a correct URL
+    if (!mongoose.Types.ObjectId.isValid(videoId)) {    //It is done so that if user sends request from a URL that is not of type of a mongoDB ID it throws error
+        throw new APIerror(400, "Invalid Video ID")
+    }
+
+    //Does that video exist
+    const video=await Video.findById(videoId)
+    if (!video) {
+        throw new APIerror(404, "Video not found")
+    }
+
+    //Ownership check
+    if(req.user._id.toString() !== video.owner.toString())
+    {
+        throw new APIerror(403, "You are not allowed to delete the video, only the owner may delete")
+    }
+
+    //Deleting the thumbnail and video from the cloudinary (cloudinary cleanup)
+    const videoFile= video.videoFile
+    const thumbnail= video.thumbnail
+
+
+    if(videoFile){
+            const publicID= getPublicId(videoFile)
+            await cloudinary.uploader.destroy(publicID)
+    }
+
+    if(thumbnail){
+        const publicID= getPublicId(thumbnail)
+        await cloudinary.uploader.destroy(publicID)
+    }
+
+    const deletedVideo=await Video.findByIdAndDelete(videoId)
+
+    return res.status(200).json(new APIresponse(200,deletedVideo,"The video has been succesfully deleted"))
+    
+    
     
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+     //Is request coming from a correct URL
+    if (!mongoose.Types.ObjectId.isValid(videoId)) {    //It is done so that if user sends request from a URL that is not of type of a mongoDB ID it throws error
+        throw new APIerror(400, "Invalid Video ID")
+    }
+
+    //Does that video exist
+    const video=await Video.findById(videoId)
+    if (!video) {
+        throw new APIerror(404, "Video not found")
+    }
+
+    //Ownership check
+    if(req.user._id.toString() !== video.owner.toString())
+    {
+        throw new APIerror(403, "You are not allowed to modify this video")
+    }
+
+    video.isPublished= !video.isPublished
+
+    await video.save()
+
+    return res.status(200).json(
+    new APIresponse(200, video, "Publish status has been successfully toggled")
+    )
+
 })
 
 export {

@@ -23,11 +23,12 @@ app.use(express.static("Public"))    //static allows us to store some files fold
 
 //routes import
 import userRouter from "./routes/user.routes.js"
+import videoRouter from "./routes/video.routes.js"
 
 //routes declaration
 app.use("/api/v1/users",userRouter)     ///api/v1/users par jate hi userRouter is activated and control transfered to user.routes.js    
 
-
+app.use("/api/v1/videos",videoRouter)
 
 
 
