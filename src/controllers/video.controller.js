@@ -71,7 +71,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const videos = await Video.find(filter)
         .sort(sortOptions)
         .skip(skip)
-        .limit(limit)
+        .limit(limitNum)
         .populate("owner", "username fullName avatar")   //For when the frontend filters videos on basis of the owner
 
     // Get total count for pagination metadata
@@ -82,7 +82,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         new APIresponse(200, {
             totalVideos,
             totalPages,
-            currentPage: pageNum,
+                
             videos
         }, "Videos fetched successfully")
     )
