@@ -24,11 +24,17 @@ app.use(express.static("Public"))    //static allows us to store some files fold
 //routes import
 import userRouter from "./routes/user.routes.js"
 import videoRouter from "./routes/video.routes.js"
+import tweetRouter from "./routes/tweet.routes.js"
+import subscryptionRouter from "./routes/subscryption.routes.js"
 
 //routes declaration
 app.use("/api/v1/users",userRouter)     ///api/v1/users par jate hi userRouter is activated and control transfered to user.routes.js    
 
 app.use("/api/v1/videos",videoRouter)
+
+app.use("/api/v1/tweets", tweetRouter)
+
+app.use("/api/v1/subscryptions", subscryptionRouter)
 
 
 

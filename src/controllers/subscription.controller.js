@@ -1,8 +1,8 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {User} from "../models/user.model.js"
 import { Subscryption } from "../models/subscryption.models.js"
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
+import {APIerror} from "../utils/ApiError.js"
+import {APIresponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 
 const toggleSubscription = asyncHandler(async (req, res) => {
@@ -11,18 +11,18 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     const subscriberId= req.user?._id
 
     if(!mongoose.Types.ObjectId.isValid(channelId)){
-        throw new ApiError(400,"Invalid channel ID")
+        throw new APIerror(400,"Invalid channel ID")
     }
 
     //User should not subscribe to themselves.
 
     if(subscriberId.toString() === channelId){
-        throw new ApiError(400,"You cant subscribe to yourself")
+        throw new APIerror(400,"You cant subscribe to yourself")
     }
 
     const channel= await User.findById(channelId)
     if(! channel){
-        throw new ApiError(404,"Channel not found")
+        throw new APIerror(404,"Channel not found")
     }
     
     const subscription= await Subscryption.findOne({
@@ -32,7 +32,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
     if(subscription){
         await subscription.deleteOne()
-        return res.status(200).json(new ApiResponse(200,null,"Unsubscribed successfully"))
+        return res.status(200).json(new APIresponse(200,null,"Unsubscribed successfully"))
     }
     else
     {
@@ -41,7 +41,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
             channel:channelId
         })
 
-        return res.status(200).json(new ApiResponse(200,subscribe,"Subscribed successfully"))
+        return res.status(200).json(new APIresponse(200,subscribe,"Subscribed successfully"))
     }
 
 
@@ -53,12 +53,12 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const {page=1,limit=10}=req.query
 
     if(! mongoose.Types.ObjectId.isValid(channelId)){
-        throw new ApiError(400,"Invalid channel ID")
+        throw new APIerror(400,"Invalid channel ID")
     }
 
     const channel= await User.findById(channelId)
     if(! channel){
-        throw new ApiError(404,"Channel not found")
+        throw new APIerror(404,"Channel not found")
     }
 
     //Pagination
@@ -68,11 +68,11 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
     if(!Number.isInteger(pageNum) || pageNum<1)
     {
-        throw new ApiError(400,"Page must be a valid integer")
+        throw new APIerror(400,"Page must be a valid integer")
     }
 
     if (!Number.isInteger(limitNum) || limitNum < 1) {
-        throw new ApiError(400, "Limit must be a positive integer")
+        throw new APIerror(400, "Limit must be a positive integer")
     }
 
     //To protect against page bombing 
@@ -133,7 +133,7 @@ const totalSubscribers = await Subscryption.countDocuments({
 
     const totalPages = Math.ceil(totalSubscribers / limitNum)
 
-    return res.status(200).json( new ApiResponse(200,{totalSubscribers,totalPages,currentPage: pageNum,subscribers},"Channel Subscribers fetched succesfully"))
+    return res.status(200).json( new APIresponse(200,{totalSubscribers,totalPages,currentPage: pageNum,subscribers},"Channel Subscribers fetched succesfully"))
 
 })
 
@@ -143,12 +143,12 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     const {page=1,limit=10}= req.query
 
     if(!mongoose.Types.ObjectId.isValid(subscriberId)){
-        throw new ApiError(400,"Invalid subscriberId")
+        throw new APIerror(400,"Invalid subscriberId")
     }
 
     const subscriber= await User.findById(subscriberId)
     if(!subscriber){
-        throw new ApiError(404,"User not found")
+        throw new APIerror(404,"User not found")
     }
 
     //Pagination
@@ -157,11 +157,11 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     let limitNum= Number(limit)
 
     if(!Number.isInteger(pageNum) || pageNum<1){
-        throw new ApiError(400,"Page must be a positive number")
+        throw new APIerror(400,"Page must be a positive number")
     }
 
     if(!Number.isInteger(limitNum) || limitNum<1){
-        throw new ApiError(400,"Limit must be a positive number")
+        throw new APIerror(400,"Limit must be a positive number")
     }
 
     const MAX_LIMIT=50
@@ -212,7 +212,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
 
     const totalPages = Math.ceil(totalChannels / limitNum)
 
-    return res.status(200).json(new ApiResponse(200,{totalChannels,totalPages,currentPage: pageNum, channels},"Subscribed channels fetched succesfully"))
+    return res.status(200).json(new APIresponse(200,{totalChannels,totalPages,currentPage: pageNum, channels},"Subscribed channels fetched succesfully"))
 })
 
 export {
