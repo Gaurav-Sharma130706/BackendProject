@@ -166,12 +166,13 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         throw new APIerror(404,"Video not found")
     }
 
+    const playlistTest= await Playlist.findById(playlistId)
     //authorization
-    if (playlist.owner.toString() !== req.user._id.toString()) {
+    if (playlistTest.owner.toString() !== req.user._id.toString()) {
     throw new APIerror(403, "Not authorized")
     }
 
-    const playlist= Playlist.findByIdAndUpdate(playlistId,{$addToSet:{videos: videoId}},{new:true})   // $addToSet won't add if already exists and new:true will return the updated document
+    const playlist= await Playlist.findByIdAndUpdate(playlistId,{$addToSet:{videos: videoId}},{new:true})   // $addToSet won't add if already exists and new:true will return the updated document
 
     if(!playlist){
         throw new APIerror(404,"Playlist not found")
