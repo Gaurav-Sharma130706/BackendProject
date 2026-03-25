@@ -1,6 +1,7 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Playlist} from "../models/playlist.models.js"
 import { Video } from "../models/video.model.js"
+import { User } from "../models/user.model.js"
 import {APIerror} from "../utils/APIerror.js"
 import {APIresponse} from "../utils/APIresponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
@@ -144,9 +145,16 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     }
     ])
 
-    if(!playlist){
-        throw new APIerror(404, "No playlist found")
+    //This Validation wont work
+    // if(!playlist){  //Aggregate() alway returns an array, never NULL, it returns [] when nothing found, not NULL Therefore it will remain always false
+    //     throw new APIerror(404, "No playlist found")
+    // }
+
+    //Check the array length instead
+    if(!playlist || playlist.length === 0){
+    throw new APIerror(404, "No playlist found")
     }
+
     return res.status(200).json(new APIresponse(200, playlist, "Playlist fetched succesfully"))
 })
 
