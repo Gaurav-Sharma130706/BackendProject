@@ -68,7 +68,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const sortOptions = { [sortBy]: sortOrder }
 
     // Fetch videos
-    const videos = await Video.find(filter)
+    const videos = await Video.find(filter) //Here you didn't use aggregation pipeline, use it to improve efficiency
         .sort(sortOptions)
         .skip(skip)
         .limit(limitNum)

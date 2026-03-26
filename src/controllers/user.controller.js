@@ -1,8 +1,8 @@
 import {asyncHandler} from "../utils/asyncHandler.js"
-import {APIerror} from "../utils/ApiError.js"
+import {APIerror} from "../utils/APIerror.js"
 import {User} from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
-import {APIresponse} from "../utils/ApiResponse.js"
+import {APIresponse} from "../utils/APIresponse.js"
 import jwt from "jsonwebtoken"
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose"
