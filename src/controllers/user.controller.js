@@ -64,7 +64,7 @@ const registerUser= asyncHandler( async(req,res)=>{
     //Step-4 Check for images
     //req.files is provided by multer which provides with the acces for all the files
 
-    const avatarLocalPath = req.files?.avatar[0]?.path    // ? is used for chaining ki agar mile ya na mile
+    const avatarLocalPath = req.files?.avatar?.[0]?.path    // ? is used for chaining ki agar mile ya na mile
     //Here we are taking the local paths of images in our server which were stored by multer
     
     if (!avatarLocalPath) {                            //If we dont find any path for our avatar that means we dont have any avatar therefore throw error since avatar is required
